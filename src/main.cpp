@@ -11,6 +11,9 @@
 // Replace with your network credentials
 const char* ssid = "O&S";
 const char* password = "0525362505";
+IPAddress ip(10, 100, 102, 110);  
+IPAddress gateway(10, 100, 102, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 // Set LED GPIO
 const int ledPin = 26;
@@ -48,6 +51,8 @@ void setup(){
   }
 
   // Connect to Wi-Fi
+  
+  WiFi.config(ip, gateway, subnet);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
