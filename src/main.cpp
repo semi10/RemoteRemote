@@ -1,19 +1,12 @@
-/*********
-  Rui Santos
-  Complete project details at https://randomnerdtutorials.com  
-*********/
-
 // Import required libraries
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 #include "SPIFFS.h"
+#include <DNSServer.h>
 
-// Replace with your network credentials
-const char* ssid = "O&S";
-const char* password = "0525362505";
-IPAddress ip(10, 100, 102, 110);  
-IPAddress gateway(10, 100, 102, 1);
-IPAddress subnet(255, 255, 255, 0);
+
+const byte DNS_PORT = 53;
+IPAddress apIP(192, 168, 199, 1);
 
 // Set LED GPIO
 const int ledPin = 26;
@@ -22,6 +15,7 @@ String ledState;
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
+DNSServer dnsServer;
 
 // Replaces placeholder with LED state value
 String processor(const String& var){
@@ -50,19 +44,18 @@ void setup(){
     return;
   }
 
-  // Connect to Wi-Fi
-  
-  WiFi.config(ip, gateway, subnet);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi..");
-  }
-  
-  // Print ESP32 Local IP Address
-  Serial.println(WiFi.localIP());
+  // Creating Wi-Fi
+  WiFi.mode(WIFI_AP);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+  WiFi.softAP("DNSServer CaptivePortal example");
+
+  dnsServer.start(DNS_PORT, "*", apIP);
 
   // Route for root / web page
+  server.onNotFound( [](AsyncWebServerRequest *request){
+  request->send(SPIFFS, "/index.html", String(), false, processor);
+  });
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(SPIFFS, "/index.html", String(), false, processor);
   });
@@ -89,5 +82,5 @@ void setup(){
 }
  
 void loop(){
-  
+  dnsServer.processNextRequest();
 }
