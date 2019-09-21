@@ -3,7 +3,7 @@
 #include "ESPAsyncWebServer.h"
 #include "SPIFFS.h"
 #include <DNSServer.h>
-
+#include <ArduinoJson.h>
 
 const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 199, 1);
@@ -47,13 +47,13 @@ void setup(){
   // Creating Wi-Fi
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-  WiFi.softAP("DNSServer CaptivePortal example");
+  WiFi.softAP("AC CaptivePortal");
 
   dnsServer.start(DNS_PORT, "*", apIP);
 
   // Route for root / web page
   server.onNotFound( [](AsyncWebServerRequest *request){
-  request->send(SPIFFS, "/index.html", String(), false, processor);
+    request->send(SPIFFS, "/index.html", String(), false, processor);
   });
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){

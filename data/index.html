@@ -7,9 +7,51 @@
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-  <h1>ESP32 Web Server</h1>
+  <h1>Climate Control</h1>
   <p>GPIO state: <strong> %STATE%</strong></p>
-  <p><a href="/on"><button class="button">ON</button></a></p>
+  <p><a href="/on"><button class="button" onclick="formToJson()">ON</button></a></p>
   <p><a href="/off"><button class="button button2">OFF</button></a></p>
+  
+  <input type="checkbox" id="RedLed"> Red
+  <input type="checkbox" id="GreenLed" checked> Green
+  <input type="checkbox" id="BlueLed"> Blue
+  
+  <p id="demo"></p>
+
+  <!--
+  <script language = "JavaScript">
+  function myFunction() {
+    document.getElementById("demo").innerHTML = "Hello World";
+  }
+  </script>
+  -->
+
+
+  <script language = "JavaScript">
+    function formToJson(){
+      var redCheckBox = document.getElementById("RedLed");
+      var greenCheckBox = document.getElementById("GreenLed");
+      var blueCheckBox = document.getElementById("BlueLed");
+
+      var red = (redCheckBox.checked == true);
+      var green = (greenCheckBox.checked == true);
+      var blue = (blueCheckBox.checked == true);
+        
+      var jsonFormInfo = JSON.stringify({
+        Leds : {
+          red:red,
+          green:green,
+          blue:blue
+        }
+      });
+
+      if (redCheckBox.checked == true)
+      {
+        window.alert(jsonFormInfo);   
+      }   
+    }
+  </script>
+
 </body>
 </html>
+
