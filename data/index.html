@@ -5,9 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script type="text/javascript" src="jquery.min.js"></script>
 </head>
 <body>
   <h1>Climate Control</h1>
+
+  <label class="container">Left(202)
+    <input type="radio" id="AC202" name="AirConditioners">
+    <span class="checkmark"></span>
+  </label>
+  <label class="container">Center(201)
+      <input type="radio" id="AC201" name="AirConditioners">
+      <span class="checkmark"></span>
+    </label>
+  <label class="container">Right(200)
+    <input type="radio" id="AC200" checked="checked" name="AirConditioners">
+    <span class="checkmark"></span>
+  </label>
+
+  <br>
+
+  <form>
+    <input class="inputBox" type="number" name="temperatureVal" min="19" max="30">°C
+    <button class="button" onclick="SetTemp()">Set Temp</button>
+  </form>
+
+  <button class="button button2" onclick="OnOff()">I/O</button>
+
+  <!--
   <p>GPIO state: <strong> %STATE%</strong></p>
   <p><a href="/on"><button class="button" onclick="formToJson()">ON</button></a></p>
   <p><a href="/off"><button class="button button2">OFF</button></a></p>
@@ -15,27 +41,21 @@
   <input type="checkbox" id="RedLed"> Red
   <input type="checkbox" id="GreenLed" checked> Green
   <input type="checkbox" id="BlueLed"> Blue
-  
-  <p id="demo"></p>
 
-  <!--
-  <script language = "JavaScript">
-  function myFunction() {
-    document.getElementById("demo").innerHTML = "Hello World";
-  }
-  </script>
-  -->
+  <p><button class="button" onclick="formToJson()">Switch</button></a></p>
 
 
   <script language = "JavaScript">
+
     function formToJson(){
+      let xhr = new XMLHttpRequest();
       var redCheckBox = document.getElementById("RedLed");
       var greenCheckBox = document.getElementById("GreenLed");
       var blueCheckBox = document.getElementById("BlueLed");
 
-      var red = (redCheckBox.checked == true);
-      var green = (greenCheckBox.checked == true);
-      var blue = (blueCheckBox.checked == true);
+      var red = redCheckBox.checked;
+      var green = greenCheckBox.checked;
+      var blue = blueCheckBox.checked;
         
       var jsonFormInfo = JSON.stringify({
         Leds : {
@@ -44,13 +64,22 @@
           blue:blue
         }
       });
+      
+      xhr.open("POST", "/submit");
+      xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+      xhr.send(jsonFormInfo);
 
-      if (redCheckBox.checked == true)
-      {
-        window.alert(jsonFormInfo);   
-      }   
+      // if (redCheckBox.checked == true)
+      // {
+      //   window.alert(jsonFormInfo);   
+      // }   
     }
   </script>
+
+-->
+
+
+  <!--<script type="text/javascript" src="script.js"></script>-->
 
 </body>
 </html>
