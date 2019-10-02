@@ -11,73 +11,71 @@
 <body>
   <h1>Climate Control</h1>
 
-  <label class="container">Left(202)
+  <label class="container">L(202)
     <input type="radio" id="AC202" name="AirConditioners">
     <span class="checkmark"></span>
   </label>
-  <label class="container">Center(201)
+  <label class="container">C(201)
       <input type="radio" id="AC201" name="AirConditioners">
       <span class="checkmark"></span>
     </label>
-  <label class="container">Right(200)
-    <input type="radio" id="AC200" checked="checked" name="AirConditioners">
+  <label class="container">R(200)
+    <input type="radio" id="AC200"  name="AirConditioners" checked="checked">
     <span class="checkmark"></span>
   </label>
 
   <br>
 
-  <form>
-    <input class="inputBox" type="number" name="temperatureVal" min="19" max="30">°C
-    <button class="button" onclick="SetTemp()">Set Temp</button>
+  <form action="/submit" method="post" id="setTempForm">
+    <input class="inputBox" type="number" id = "temperatureVal" name="temperatureVal" min="19" max="30">°C
+    <button class="button" id = "btnSubmit" type="submit" name="submit">Set Temp</button>
+    <div id="server-results"><!-- For server results --></div>
   </form>
-
-  <button class="button button2" onclick="OnOff()">I/O</button>
-
-  <!--
-  <p>GPIO state: <strong> %STATE%</strong></p>
-  <p><a href="/on"><button class="button" onclick="formToJson()">ON</button></a></p>
-  <p><a href="/off"><button class="button button2">OFF</button></a></p>
   
-  <input type="checkbox" id="RedLed"> Red
-  <input type="checkbox" id="GreenLed" checked> Green
-  <input type="checkbox" id="BlueLed"> Blue
+  <br>
 
-  <p><button class="button" onclick="formToJson()">Switch</button></a></p>
-
+  <button action="/submit" class="button button2" id="toggleButton">I/O</button>
 
   <script language = "JavaScript">
 
-    function formToJson(){
-      let xhr = new XMLHttpRequest();
-      var redCheckBox = document.getElementById("RedLed");
-      var greenCheckBox = document.getElementById("GreenLed");
-      var blueCheckBox = document.getElementById("BlueLed");
+    $("#setTempForm").submit(function(event){
+      event.preventDefault(); //prevent default action 
+      
+      console.log("Change Temperature");
 
-      var red = redCheckBox.checked;
-      var green = greenCheckBox.checked;
-      var blue = blueCheckBox.checked;
-        
+      var post_url = $(this).attr("action"); //get action url
+      
       var jsonFormInfo = JSON.stringify({
-        Leds : {
-          red:red,
-          green:green,
-          blue:blue
+        AirConditioner : {
+          ID: "201",
+          CMD: "ChangeTemp"
         }
       });
-      
-      xhr.open("POST", "/submit");
-      xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-      xhr.send(jsonFormInfo);
 
-      // if (redCheckBox.checked == true)
-      // {
-      //   window.alert(jsonFormInfo);   
-      // }   
-    }
+      $.ajax({
+        type: "POST",
+        url: post_url,
+        dataType: "json",
+        contentType: "application/json",
+        data: jsonFormInfo
+      });
+
+    });
+    
+    $("#toggleButton").click(function() {
+      var post_url = $(this).attr("action"); //get action url
+      console.log("Toggle");
+
+      var jsonFormInfo = JSON.stringify({
+        AirConditioner : {
+          ID: 201,
+          CMD: "Toggle"
+        }
+      });
+    });
+
+
   </script>
-
--->
-
 
   <!--<script type="text/javascript" src="script.js"></script>-->
 

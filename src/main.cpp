@@ -1,116 +1,102 @@
-// Import required libraries
-#include "WiFi.h"
-#include "ESPAsyncWebServer.h"
-#include <AsyncTCP.h>
 #include "SPIFFS.h"
 #include <DNSServer.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncJson.h>
 #include <ArduinoJson.h>
+#include <set>
 
-const byte DNS_PORT = 53;
-IPAddress ap_local_IP(192,168,1,77);
-IPAddress ap_gateway(192,168,1,254);
-IPAddress ap_subnet(255,255,255,0);
-
-IPAddress apIP(192, 168, 100, 1);
-
-// Set LED GPIO
-const int ledPin = 26;
-// Stores LED state
-String ledState;
-
-
-// Create AsyncWebServer object on port 80
-AsyncWebServer server(80);
 DNSServer dnsServer;
+AsyncWebServer server(80);
 
-// Replaces placeholder with LED state value
-String processor(const String& var){
-  //Serial.println(var);
-  if(var == "STATE"){
-    if(digitalRead(ledPin)){
-      ledState = "ON";
-    }
-    else{
-      ledState = "OFF";
-    }
-    //Serial.print(ledState);
+
+class CaptiveRequestHandler : public AsyncWebHandler {
+public:
+  std::set<String> availableUrl;
+  CaptiveRequestHandler() {}
+  virtual ~CaptiveRequestHandler() {}
+
+
+  bool canHandle(AsyncWebServerRequest *request){
+      Serial.println(request->url());
+    if (request->url() == "/generate_204") return true;
+    if (request->url() == "/index.html") return true;
+    if (request->url() == "/jquery.min.js")  return true;
+    if (request->url() == "/style.css")  return true;
+    //request->addInterestingHeader("ANY");
+    return false;
   }
-  return "?";
-}
- 
+
+  void handleRequest(AsyncWebServerRequest *request) {
+    //Send index.htm as text
+    String requestedURL = request->url(); 
+    Serial.println(requestedURL);
+
+    AsyncWebServerResponse *response;
+
+    int params = request->params();
+
+    for(int i=0; i<params; i++)
+    {
+      AsyncWebParameter* p = request->getParam(i);
+      if(p->isPost())
+      {
+        Serial.println("POST!!!");
+        return;
+      }
+    }
+
+    if(request->method() == HTTP_POST){
+        Serial.println("POST!?!!!");
+    } 
+
+    //Serial.println(request->contentType());
+
+    if (request->url() == "/index.html") response = request->beginResponse(SPIFFS, "/index.html");
+    else if (request->url() == "/jquery.min.js") response = request->beginResponse(SPIFFS, "/jquery.min.js");
+    else if (request->url() == "/style.css") response = request->beginResponse(SPIFFS, "/style.css");
+    else response = request->beginResponse(SPIFFS, "/index.html");
+    
+    request->send(response);
+  }
+};
+
+
 void setup(){
   // Serial port for debugging purposes
-  //Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);
+  Serial.begin(115200);
 
   // Initialize SPIFFS
-  if(!SPIFFS.begin(true)){
-    //Serial.println("An Error has occurred while mounting SPIFFS");
+  if(!SPIFFS.begin(true))
+  {
+    Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
 
-  // Creating Wi-Fi
-  WiFi.mode(WIFI_MODE_AP);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-  WiFi.softAP("CaptivePortal2");
+  //your other setup stuff...
+  WiFi.softAP("esp-captive");
+  dnsServer.start(53, "*", WiFi.softAPIP());
+  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);//only when requested from AP
 
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(DNS_PORT, "*", apIP);
   
-  // Route for root / web page
-  server.onNotFound( [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", String(), false, processor);
+  AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/submit", [](AsyncWebServerRequest *request, JsonVariant &json) {
+    JsonObject& jsonObj = json.as<JsonObject>();
+    //jsonObj.prettyPrintTo(Serial);
+
+    int ID = jsonObj["AirConditioner"]["ID"];
+    const char * CMD = jsonObj["AirConditioner"]["CMD"];
+
+    Serial.println(ID);
+    Serial.println(CMD);
+    request->send(200, "application/json", "{test: \"ok\"}");
   });
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-  });
-  
-  // Route to load style.css file
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/style.css", "text/css");
-  });
-
-   // Route to load jquery.js file
-  server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("jquery requested");
-    request->send(SPIFFS, "/jquery.min.js", "text/javascript");
-  });
-
-   // Route to load script.js file
-  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("script requested");
-    request->send(SPIFFS, "/script.js", "text/javascript");
-  });
-
-  // Route to set GPIO to HIGH
-  server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request){
-    digitalWrite(ledPin, HIGH);    
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-  });
-  
-  // Route to set GPIO to LOW
-  server.on("/off", HTTP_GET, [](AsyncWebServerRequest *request){
-    digitalWrite(ledPin, LOW);    
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-  });
-
-  server.on("/submit", HTTP_POST, [](AsyncWebServerRequest *request){
-    String message;
-    if (request->hasParam("green", true)) {
-        message = request->getParam("green", true)->value();
-    } else {
-        message = "No message sent";
-    }
-    Serial.println(message);
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-  });
-
-
-  // Start server
+  //more handlers...
+  server.addHandler(handler);
   server.begin();
 }
- 
+
 void loop(){
-    dnsServer.processNextRequest();
+  dnsServer.processNextRequest();
 }
