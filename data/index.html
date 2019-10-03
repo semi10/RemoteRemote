@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>ESP32 Web Server</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" type="text/css" href="style.css">
 
@@ -11,23 +11,23 @@
 <body>
   <h1>Climate Control</h1>
 
-  <label class="container">L(202)
-    <input type="radio" id="AC202" name="AirConditioners">
+  <label class="container">Green(202)
+    <input type="radio" id="AC202" value=202 name="AirConditioners">
     <span class="checkmark"></span>
   </label>
-  <label class="container">C(201)
-      <input type="radio" id="AC201" name="AirConditioners">
+  <label class="container">Blue(201)
+      <input type="radio" id="AC201" value=201 name="AirConditioners">
       <span class="checkmark"></span>
     </label>
-  <label class="container">R(200)
-    <input type="radio" id="AC200"  name="AirConditioners" checked="checked">
+  <label class="container">Red(200)
+    <input type="radio" id="AC200"  value=200 name="AirConditioners" checked="checked">
     <span class="checkmark"></span>
   </label>
 
   <br>
 
   <form action="/submit" method="post" id="setTempForm">
-    <input class="inputBox" type="number" id = "temperatureVal" name="temperatureVal" min="19" max="30">°C
+    <input class="inputBox" type="number" id = "temperatureVal" name="temperatureVal" value=25 min="0" max="255">°C
     <button class="button" id = "btnSubmit" type="submit" name="submit">Set Temp</button>
     <div id="server-results"><!-- For server results --></div>
   </form>
@@ -41,14 +41,15 @@
     $("#setTempForm").submit(function(event){
       event.preventDefault(); //prevent default action 
       
-      console.log("Change Temperature");
-
       var post_url = $(this).attr("action"); //get action url
-      
+      var currentAC = $('input[name=AirConditioners]:checked').val(); // get selected Air conditioner
+      var tempVal = $('#temperatureVal').val();
+
       var jsonFormInfo = JSON.stringify({
         AirConditioner : {
-          ID: "201",
-          CMD: "ChangeTemp"
+          ID: currentAC,
+          CMD: "ChangeTemp",
+          TempVal: tempVal
         }
       });
 
@@ -64,14 +65,23 @@
     
     $("#toggleButton").click(function() {
       var post_url = $(this).attr("action"); //get action url
-      console.log("Toggle");
+      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
 
       var jsonFormInfo = JSON.stringify({
         AirConditioner : {
-          ID: 201,
+          ID: currentAC,
           CMD: "Toggle"
         }
       });
+
+      $.ajax({
+        type: "POST",
+        url: post_url,
+        dataType: "json",
+        contentType: "application/json",
+        data: jsonFormInfo
+      });
+
     });
 
 
