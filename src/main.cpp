@@ -103,10 +103,7 @@ void setup(){
   AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/submit", [](AsyncWebServerRequest *request, JsonVariant &json) {
     JsonObject& jsonObj = json.as<JsonObject>();
     //jsonObj.prettyPrintTo(Serial);
-
     handleJSON(jsonObj);
-
-
     request->send(200, "application/json", "{test: \"ok\"}");
   });
 
