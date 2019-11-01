@@ -35,6 +35,7 @@
   <br>
 
   <button action="/submit" class="button button2" id="toggleButton">I/O</button>
+  <button action="/submit" class="button" id="sourceButton">Source</button>
 
   <script language = "JavaScript">
 
@@ -71,6 +72,27 @@
         AirConditioner : {
           ID: currentAC,
           CMD: "Toggle"
+        }
+      });
+
+      $.ajax({
+        type: "POST",
+        url: post_url,
+        dataType: "json",
+        contentType: "application/json",
+        data: jsonFormInfo
+      });
+
+    });
+
+    $("#sourceButton").click(function() {
+      var post_url = $(this).attr("action"); //get action url
+      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
+
+      var jsonFormInfo = JSON.stringify({
+        AirConditioner : {
+          ID: currentAC,
+          CMD: "Source"
         }
       });
 
