@@ -11,15 +11,15 @@
 <body>
   <h1>Climate Control</h1>
 
-  <label class="container">Green(202)
+  <label class="container">[202]
     <input type="radio" id="AC202" value=202 name="AirConditioners">
     <span class="checkmark"></span>
   </label>
-  <label class="container">Blue(201)
+  <label class="container">[201]
       <input type="radio" id="AC201" value=201 name="AirConditioners">
       <span class="checkmark"></span>
     </label>
-  <label class="container">Red(200)
+  <label class="container">[200]
     <input type="radio" id="AC200"  value=200 name="AirConditioners" checked="checked">
     <span class="checkmark"></span>
   </label>
@@ -32,10 +32,14 @@
     <div id="server-results"><!-- For server results --></div>
   </form>
   
+
+  <button action="/submit" class="button" id="modeVentButton">Vent</button>
+  <button action="/submit" class="button" id="modeHeatButton">Heat</button>
+  <button action="/submit" class="button" id="modeChillButton">Chill</button> 
+
   <br>
 
   <button action="/submit" class="button button2" id="toggleButton">I/O</button>
-  <button action="/submit" class="button" id="sourceButton">Source</button>
 
   <script language = "JavaScript">
 
@@ -85,14 +89,14 @@
 
     });
 
-    $("#sourceButton").click(function() {
+    $("#modeVentButton").click(function() {
       var post_url = $(this).attr("action"); //get action url
       var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
 
       var jsonFormInfo = JSON.stringify({
         AirConditioner : {
           ID: currentAC,
-          CMD: "Source"
+          CMD: "Vent"
         }
       });
 
@@ -103,7 +107,46 @@
         contentType: "application/json",
         data: jsonFormInfo
       });
+    });
 
+    $("#modeHeatButton").click(function() {
+      var post_url = $(this).attr("action"); //get action url
+      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
+
+      var jsonFormInfo = JSON.stringify({
+        AirConditioner : {
+          ID: currentAC,
+          CMD: "Heat"
+        }
+      });
+
+      $.ajax({
+        type: "POST",
+        url: post_url,
+        dataType: "json",
+        contentType: "application/json",
+        data: jsonFormInfo
+      });
+    });
+
+    $("#modeChillButton").click(function() {
+      var post_url = $(this).attr("action"); //get action url
+      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
+
+      var jsonFormInfo = JSON.stringify({
+        AirConditioner : {
+          ID: currentAC,
+          CMD: "Chill"
+        }
+      });
+
+      $.ajax({
+        type: "POST",
+        url: post_url,
+        dataType: "json",
+        contentType: "application/json",
+        data: jsonFormInfo
+      });
     });
 
 

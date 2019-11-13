@@ -18,17 +18,19 @@
 
 struct s_irTimes
 {
-    float preamble[2];
-    float logic[2][2];
+  float preamble[2];
+  float logic[2][2];
+  float postamble[2];
 };
 
-static s_irTimes samsung { 4500 / IR_TICK, 4500 / IR_TICK, 539 / IR_TICK, 585 / IR_TICK,  539 / IR_TICK, 1709 / IR_TICK };
-static s_irTimes airConditioner { 2900 / IR_TICK, 2900 / IR_TICK, 900 / IR_TICK, 1000 / IR_TICK, 1000 / IR_TICK, 900 / IR_TICK };
+static s_irTimes samsung { 4500 / IR_TICK, 4500 / IR_TICK, 539 / IR_TICK, 585 / IR_TICK,  539 / IR_TICK, 1709 / IR_TICK, 0 / IR_TICK, 0 / IR_TICK };
+static s_irTimes airConditioner { 2900 / IR_TICK, 2900 / IR_TICK, 900 / IR_TICK, 1000 / IR_TICK, 1000 / IR_TICK, 900 / IR_TICK, 0 / IR_TICK, 0 / IR_TICK };
 
 rmt_data_t data[256];
 rmt_obj_t* rmt_send = NULL;
 
 void fillData(byte *cmd, rmt_data_t *data, byte size);
+uint8_t formatTempVal(uint8_t tempVal);
 
 struct AirConditioner {
   uint8_t IR_Pin;
@@ -40,9 +42,6 @@ struct AirConditioner {
 DNSServer dnsServer;
 AsyncWebServer server(80);
 
-AirConditioner AC200 = {25, LOW, 255, PWM_CHANNEL_0};
-AirConditioner AC201 = {26, LOW, 255, PWM_CHANNEL_1};
-AirConditioner AC202 = {27, LOW, 255, PWM_CHANNEL_2};
 
 
 void handleJSON(JsonObject& jsonObj);
@@ -93,23 +92,6 @@ void setup(){
   printf("real tick set to: %fns\n", realTick);
 
 
-  pinMode(AC200.IR_Pin, OUTPUT);    
-  pinMode(AC201.IR_Pin, OUTPUT); 
-  pinMode(AC202.IR_Pin, OUTPUT); 
-
-  digitalWrite(AC200.IR_Pin, AC200.State); 
-  digitalWrite(AC201.IR_Pin, AC201.State); 
-  digitalWrite(AC202.IR_Pin, AC202.State); 
-
-  ledcSetup(PWM_CHANNEL_0, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(PWM_CHANNEL_1, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(PWM_CHANNEL_2, PWM_FREQ, PWM_RESOLUTION);
-
-  ledcAttachPin(AC200.IR_Pin, AC200.PWM_Channel);
-  ledcAttachPin(AC201.IR_Pin, AC201.PWM_Channel);
-  ledcAttachPin(AC202.IR_Pin, AC202.PWM_Channel);
-
-
   // Initialize SPIFFS
   if(!SPIFFS.begin(true))
   {
@@ -118,7 +100,7 @@ void setup(){
   }
 
   //your other setup stuff...
-  WiFi.softAP("esp-captive");
+  WiFi.softAP("IR3-captive");
   dnsServer.start(53, "*", WiFi.softAPIP());
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);//only when requested from AP
 
@@ -150,13 +132,13 @@ void handleJSON(JsonObject& jsonObj)
   switch (ID)
   {
     case 200: 
-      currentAC = &AC200;
+      //currentAC = &AC200;
       break;
     case 201:
-      currentAC = &AC201;
+      //currentAC = &AC201;
       break;
     case 202:
-      currentAC = &AC202;
+      //currentAC = &AC202;
       break;
     default:
       Serial.println("Unexpected AC ID");
@@ -165,28 +147,41 @@ void handleJSON(JsonObject& jsonObj)
 
   if (!strcmp(CMD, "Toggle"))
   {
-    currentAC->State ^= 1;
+    //currentAC->State ^= 1;
 
     byte cmd[] = {0x9C, 0x1C, 0x00, 0x00};  // On/Off
     fillData(cmd, data, sizeof(cmd));
     rmtWrite(rmt_send, data, 106);
 
-    if (currentAC->State == HIGH) ledcWrite(currentAC->PWM_Channel, currentAC->Temperature);
-    else ledcWrite(currentAC->PWM_Channel, LOW);
+    // if (currentAC->State == HIGH) ledcWrite(currentAC->PWM_Channel, currentAC->Temperature);
+    // else ledcWrite(currentAC->PWM_Channel, LOW);
   } 
   else if (!strcmp(CMD, "ChangeTemp"))
   {
     if (currentAC->State == LOW) return;
 
     const uint8_t tempVal = jsonObj["AirConditioner"]["TempVal"];
-    currentAC->Temperature = tempVal;
-    ledcWrite(currentAC->PWM_Channel, currentAC->Temperature);
+    const uint8_t formatedTempVal = formatTempVal(tempVal);
+    // currentAC->Temperature = tempVal;
+    // ledcWrite(currentAC->PWM_Channel, currentAC->Temperature);
   }
-  else if (!strcmp(CMD, "Source"))
+  else if (!strcmp(CMD, "Vent"))
   {
-    byte cmd[] = {0xE0, 0xE0, 0x80, 0x7F}; // Source
+    byte cmd[] = {0x58, 0x12, 0x00, 0x00}; // Vent
     fillData(cmd, data, sizeof(cmd));
-    rmtWrite(rmt_send, data, 34);
+    rmtWrite(rmt_send, data, 106);
+  }
+  else if (!strcmp(CMD, "Heat"))
+  {
+    byte cmd[] = {0x20, 0x12, 0x00, 0x00}; // Heat
+    fillData(cmd, data, sizeof(cmd));
+    rmtWrite(rmt_send, data, 106);
+  }
+  else if (!strcmp(CMD, "Chill"))
+  {
+    byte cmd[] = {0x18, 0x08, 0x00, 0x00}; // Chill
+    fillData(cmd, data, sizeof(cmd));
+    rmtWrite(rmt_send, data, 106);
   }
   else Serial.println("???");
 }
@@ -244,4 +239,16 @@ void fillData(byte *cmd, rmt_data_t *data, byte size)
   data[index].duration1 = airConditioner.logic[0][0];
   data[index].level1 = 1;
   index++;
+}
+
+uint8_t formatTempVal(uint8_t tempVal)
+{
+  uint8_t tempValWithOffet = tempVal - 12;
+  uint8_t formatedTempVal = 0;
+  uint8_t formatedTempValLoNibble = (tempValWithOffet % 10) & 0x0F;
+  uint8_t formatedTempValHiNibble = uint8_t(tempValWithOffet / 10) & 0xF0;
+  
+  formatedTempVal = formatedTempValHiNibble | formatedTempValLoNibble;
+
+  return formatedTempVal;
 }
