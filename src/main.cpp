@@ -1,4 +1,4 @@
-#include "SPIFFS.h"
+#include <SPIFFS.h>
 #include <DNSServer.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
@@ -6,31 +6,11 @@
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 #include <set>
-#include "esp32-hal.h"
+//#include "esp32-hal.h"
+#include <IR_Transmitter.h>
 
-#define PWM_FREQ  5000
-#define PWM_RESOLUTION 8
-#define PWM_CHANNEL_0 0
-#define PWM_CHANNEL_1 1
-#define PWM_CHANNEL_2 2
+IR_Transmitter transmitter;
 
-#define IR_TICK 2.5 //uSec
-
-struct s_irTimes
-{
-  float preamble[2];
-  float logic[2][2];
-  float postamble[2];
-};
-
-static s_irTimes samsung { 4500 / IR_TICK, 4500 / IR_TICK, 539 / IR_TICK, 585 / IR_TICK,  539 / IR_TICK, 1709 / IR_TICK, 0 / IR_TICK, 0 / IR_TICK };
-static s_irTimes airConditioner { 2900 / IR_TICK, 2900 / IR_TICK, 900 / IR_TICK, 1000 / IR_TICK, 1000 / IR_TICK, 900 / IR_TICK, 0 / IR_TICK, 0 / IR_TICK };
-
-rmt_data_t data[256];
-rmt_obj_t* rmt_send = NULL;
-
-void fillData(byte *cmd, rmt_data_t *data, byte size);
-uint8_t formatTempVal(uint8_t tempVal);
 
 struct AirConditioner {
   uint8_t IR_Pin;
@@ -42,11 +22,7 @@ struct AirConditioner {
 DNSServer dnsServer;
 AsyncWebServer server(80);
 
-
-
 void handleJSON(JsonObject& jsonObj);
-
-
 
 class CaptiveRequestHandler : public AsyncWebHandler {
   public:
@@ -81,17 +57,6 @@ class CaptiveRequestHandler : public AsyncWebHandler {
 void setup(){
   Serial.begin(115200);
 
-  // IR Setup
-  if ((rmt_send = rmtInit(18, true, RMT_MEM_64)) == NULL)
-  {
-    Serial.println("init sender failed\n");
-  }
-
-  rmtSetCarrier(rmt_send, true, 1, 1050, 1050);
-  float realTick = rmtSetTick(rmt_send, IR_TICK * 1000);
-  printf("real tick set to: %fns\n", realTick);
-
-
   // Initialize SPIFFS
   if(!SPIFFS.begin(true))
   {
@@ -121,14 +86,13 @@ void loop(){
   dnsServer.processNextRequest();
 }
 
-
 void handleJSON(JsonObject& jsonObj)
 {
   const char * CMD = jsonObj["AirConditioner"]["CMD"];
   const uint8_t ID = jsonObj["AirConditioner"]["ID"];
   Serial.println(ID);
 
-  AirConditioner *currentAC;
+  //AirConditioner *currentAC;
   switch (ID)
   {
     case 200: 
@@ -147,108 +111,27 @@ void handleJSON(JsonObject& jsonObj)
 
   if (!strcmp(CMD, "Toggle"))
   {
-    //currentAC->State ^= 1;
-
-    byte cmd[] = {0x9C, 0x1C, 0x00, 0x00};  // On/Off
-    fillData(cmd, data, sizeof(cmd));
-    rmtWrite(rmt_send, data, 106);
-
-    // if (currentAC->State == HIGH) ledcWrite(currentAC->PWM_Channel, currentAC->Temperature);
-    // else ledcWrite(currentAC->PWM_Channel, LOW);
+    transmitter.IR_Send(IR_Cmd_TOGGLE);
   } 
   else if (!strcmp(CMD, "ChangeTemp"))
   {
-    if (currentAC->State == LOW) return;
-
     const uint8_t tempVal = jsonObj["AirConditioner"]["TempVal"];
-    const uint8_t formatedTempVal = formatTempVal(tempVal);
-    // currentAC->Temperature = tempVal;
-    // ledcWrite(currentAC->PWM_Channel, currentAC->Temperature);
+    transmitter.IR_Send(IR_Cmd_ChangeTemp, tempVal);
   }
   else if (!strcmp(CMD, "Vent"))
   {
-    byte cmd[] = {0x58, 0x12, 0x00, 0x00}; // Vent
-    fillData(cmd, data, sizeof(cmd));
-    rmtWrite(rmt_send, data, 106);
+    transmitter.IR_Send(IR_Cmd_VENT);
   }
   else if (!strcmp(CMD, "Heat"))
   {
-    byte cmd[] = {0x20, 0x12, 0x00, 0x00}; // Heat
-    fillData(cmd, data, sizeof(cmd));
-    rmtWrite(rmt_send, data, 106);
+    transmitter.IR_Send(IR_Cmd_HEAT);
   }
   else if (!strcmp(CMD, "Chill"))
   {
-    byte cmd[] = {0x18, 0x08, 0x00, 0x00}; // Chill
-    fillData(cmd, data, sizeof(cmd));
-    rmtWrite(rmt_send, data, 106);
+    transmitter.IR_Send(IR_Cmd_CHILL);
   }
-  else Serial.println("???");
-}
-
-void fillData(byte *cmd, rmt_data_t *data, byte size) 
-{
-  int index = 0;
-  int bit = 0;
-
-  for (int repeat = 0; repeat < 3; repeat++)
+  else
   {
-    //Preamble Byte
-    data[index].duration0 = airConditioner.preamble[0];
-    data[index].level0 = 1;
-    data[index].duration1 = airConditioner.preamble[1];
-    data[index].level1 = 0;
-    index++;
-    
-    for (int i = 0; i < size; i++)
-    {
-      uint8_t mask = 0x80;
-      for (int j = 0; j < 8; j++)
-      {
-        bit = bool(cmd[i] & mask);
-        data[index].duration0 = airConditioner.logic[bit][0];
-        data[index].level0 = !bit;
-        data[index].duration1 = airConditioner.logic[bit][1];
-        data[index].level1 = bit;
-        index++;
-        
-        mask >>=1;
-      }
-    }  
-
-    // '1'
-    bit = 1;
-    data[index].duration0 = airConditioner.logic[bit][0];
-    data[index].level0 = !bit;
-    data[index].duration1 = airConditioner.logic[bit][1];
-    data[index].level1 = bit;
-    index++;
-
-    // '0'
-    bit = 0;
-    data[index].duration0 = airConditioner.logic[bit][0];
-    data[index].level0 = !bit;
-    data[index].duration1 = airConditioner.logic[bit][1];
-    data[index].level1 = bit;
-    index++;
+    Serial.println("Wrong IR Cmd!");
   }
-
-  // Finish 
-  data[index].duration0 = airConditioner.preamble[0];
-  data[index].level0 = 1;
-  data[index].duration1 = airConditioner.logic[0][0];
-  data[index].level1 = 1;
-  index++;
-}
-
-uint8_t formatTempVal(uint8_t tempVal)
-{
-  uint8_t tempValWithOffet = tempVal - 12;
-  uint8_t formatedTempVal = 0;
-  uint8_t formatedTempValLoNibble = (tempValWithOffet % 10) & 0x0F;
-  uint8_t formatedTempValHiNibble = uint8_t(tempValWithOffet / 10) & 0xF0;
-  
-  formatedTempVal = formatedTempValHiNibble | formatedTempValLoNibble;
-
-  return formatedTempVal;
 }
