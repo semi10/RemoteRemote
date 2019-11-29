@@ -26,6 +26,9 @@ html {
   .button2 {
     background-color: #f44336;
   }
+  .buttonActive{
+    background-color: green;
+  }
 
   .inputBox {
     border-radius: 4px;
