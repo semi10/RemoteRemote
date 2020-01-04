@@ -1,166 +1,204 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>ESP32 Web Server</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-  <link rel="icon" href="data:,">
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <head>
+    <title>ESP32 Web Server</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
 
-  <script type="text/javascript" src="jquery.min.js"></script>
-</head>
-<body>
-  <h1>Climate Control</h1>
-
-  <label class="container">[202]
-    <input type="radio" id="AC202" value=202 name="AirConditioners">
-    <span class="checkmark"></span>
-  </label>
-  <label class="container">[201]
-      <input type="radio" id="AC201" value=201 name="AirConditioners">
-      <span class="checkmark"></span>
-    </label>
-  <label class="container">[200]
-    <input type="radio" id="AC200"  value=200 name="AirConditioners" checked="checked">
-    <span class="checkmark"></span>
-  </label>
-
-  <br>
-
-  <form action="/submit" method="post" id="setTempForm">
-    <input class="inputBox" type="number" id = "temperatureVal" name="temperatureVal" value=25 min="0" max="255">°C
-    <button class="button" id = "btnSubmit" type="submit" name="submit">Set Temp</button>
-    <div id="server-results"><!-- For server results --></div>
-  </form>
-  
-
-  <button action="/submit" class="button ACCtrlBtn" id="modeVentButton">Vent</button>
-  <button action="/submit" class="button ACCtrlBtn" id="modeHeatButton">Heat</button>
-  <button action="/submit" class="button buttonActive ACCtrlBtn" id="modeChillButton">Chill</button> 
-
-  <br>
-
-  <button action="/submit" class="button" id="strengthLowButton">Low</button>
-  <button action="/submit" class="button" id="strengthMediumButton">Medium</button>
-  <button action="/submit" class="button" id="strengthHighButton">High</button> 
-  <button action="/submit" class="button buttonActive" id="strengthAutoButton">Auto</button> 
-
-  <br>
-
-  <button action="/submit" class="button button2" id="toggleButton">I/O</button>
-
-  <script language = "JavaScript">
-
-    $("#setTempForm").submit(function(event){
-      event.preventDefault(); //prevent default action 
-      
-      var post_url = $(this).attr("action"); //get action url
-      var currentAC = $('input[name=AirConditioners]:checked').val(); // get selected Air conditioner
-      var tempVal = $('#temperatureVal').val();
-
-      var jsonFormInfo = JSON.stringify({
-        AirConditioner : {
-          ID: currentAC,
-          CMD: "ChangeTemp",
-          TempVal: tempVal
-        }
-      });
-
-      $.ajax({
-        type: "POST",
-        url: post_url,
-        dataType: "json",
-        contentType: "application/json",
-        data: jsonFormInfo
-      });
-
-    });
+    <link rel="stylesheet" href="jquery.mobile.css">
+    <link rel="stylesheet" href="jqm-demos.css">
+    <link rel="stylesheet" href="style.css">
     
-    $("#toggleButton").click(function() {
-      var post_url = $(this).attr("action"); //get action url
-      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
+    <script type="text/javascript" src="jquery.js"></script>
+    <script type="text/javascript" src="jquery.mobile.js"></script>  
+  </head>
 
-      var jsonFormInfo = JSON.stringify({
-        AirConditioner : {
-          ID: currentAC,
-          CMD: "Toggle"
+
+  <body align="center">
+    <h1>Climate Control</h1>
+
+    <div>
+      <form>
+        <fieldset data-role="controlgroup" data-type="horizontal">
+          <legend>AC to Control:</legend>
+          <input class="ac_sel" type="checkbox" name="cb_ac202" id="cb_ac202">
+          <label for="cb_ac202">[202]</label>
+          <input class="ac_sel" type="checkbox" name="cb_ac201" id="cb_ac201">
+          <label for="cb_ac201">[201]</label>
+          <input class="ac_sel" type="checkbox" name="cb_ac200" id="cb_ac200">
+          <label for="cb_ac200">[200]</label>
+        </fieldset>
+      </form>
+    </div>
+
+    <br>
+
+    <button class="ui-btn ui-btn-inline" id="btn_ac_IO">I/O</button>
+
+    <br>
+
+    <form class="full-width-slider">
+      <div class="ui-field-contain">
+          <label for="sl_ac_temp">Temperature:</label>
+          <input type="range" name="sl_ac_temp" id="sl_ac_temp" min="17" max="30" value="25" width="120px" data-show-value="true">
+      </div>
+    </form>
+
+    <br>
+
+    <div>
+      <form>
+        <fieldset data-role="controlgroup" data-type="horizontal">
+          <!--<legend>Horizontal:</legend>-->
+          <input class="ac_ctrl" type="radio" name="rb_ac_mode" id="rb_ac_mode_vent" checked="checked">
+          <label for="rb_ac_mode_vent">Vent</label>
+          <input class="ac_ctrl" type="radio" name="rb_ac_mode" id="rb_ac_mode_heat">
+          <label for="rb_ac_mode_heat">Heat</label>
+          <input class="ac_ctrl" type="radio" name="rb_ac_mode" id="rb_ac_mode_chill">
+          <label for="rb_ac_mode_chill">Chill</label>
+        </fieldset>
+      </form>
+    </div>
+
+    <br>
+
+    <div>
+      <form>
+        <fieldset data-role="controlgroup" data-type="horizontal">
+          <!--<legend>Horizontal:</legend>-->
+          <input class="ac_ctrl" type="radio" name="rb_ac_strength" id="rb_ac_strength_low" checked="checked">
+          <label for="rb_ac_strength_low">Low</label>
+          <input class="ac_ctrl" type="radio" name="rb_ac_strength" id="rb_ac_strength_medium">
+          <label for="rb_ac_strength_medium">Medium</label>
+          <input class="ac_ctrl" type="radio" name="rb_ac_strength" id="rb_ac_strength_high">
+          <label for="rb_ac_strength_high">High</label>
+          <input class="ac_ctrl" type="radio" name="rb_ac_strength" id="rb_ac_strength_auto">
+          <label for="rb_ac_strength_auto">Auto</label>
+        </fieldset>
+      </form>
+    </div>
+
+
+    <br>
+    
+    <button class="ac_ctrl">Apply</button>
+
+    <script language = "JavaScript">
+      var tempVal = $('#sl_ac_temp').val();
+      var checkedAC = 0;
+
+      function updateCheckedAC()
+      {
+        checkedAC = $("#cb_ac202").is(':checked') << 1;
+        checkedAC = (checkedAC | $("#cb_ac201").is(':checked')) << 1;
+        checkedAC = (checkedAC | $("#cb_ac200").is(':checked'));
+
+        disableCTRL(checkedAC == 0);
+      }
+
+      function disableCTRL(desiredState)
+      {
+        $('.ac_ctrl').attr('disabled', desiredState);
+        $('#btn_ac_IO').prop('disabled', desiredState);
+        $('#sl_ac_temp').attr('disabled', desiredState);
+
+        
+        if (desiredState)
+        {
+          $('#sl_ac_temp').slider('disable');
+          $("input[type='radio']").checkboxradio('disable');
+          $('#sl_ac_temp-label').css('color', 'darkgrey');
+        }
+        else 
+        {
+          $('#sl_ac_temp').slider('enable');
+          $("input[type='radio']").checkboxradio('enable');
+          $('#sl_ac_temp-label').css('color', 'black');
+        }
+      }
+
+      $(document).ready(function() 
+      {
+        disableCTRL(true);
+
+        $(".ac_sel").click(function()
+        {
+          updateCheckedAC();
+        });
+
+        $(".ac_ctrl").click(function()
+        {
+          sendCMD(false);
+        });
+
+        $("#btn_ac_IO").click(function()
+        {
+          sendCMD(true);
+        });
+
+        $("#sl_ac_temp").change(function() 
+        {
+          tempVal = $('#sl_ac_temp').val();
+          sendCMD(false);
+        });
+
+        function getCheckedMode()
+        {
+          var checkedMode;
+          if ($('[id=rb_ac_mode_vent]:checked').val()) return "Vent";
+          else if ($('[id=rb_ac_mode_heat]:checked').val()) return "Heat";
+          else return "Chill";
+        }
+
+        function getCheckedStrength()
+        {
+          var checkedStrength;
+          if ($('[id=rb_ac_strength_low]:checked').val()) return "Low";
+          else if ($('[id=rb_ac_strength_medium]:checked').val()) return "Medium";
+          else if ($('[id=rb_ac_strength_high]:checked').val()) return "High";
+          else return "Auto";
+        }
+
+        function printToConsole(toggleOnOff)
+        {
+          console.log("Checked AC: " + checkedAC);
+          console.log("Toggle: " + toggleOnOff);
+          console.log("Temperature Value: " + tempVal);
+          console.log("Mode: " + getCheckedMode());
+          console.log("Strength: " + getCheckedStrength());
+        }
+
+        function sendCMD(toggleOnOff)
+        {
+          //var post_url = $(this).attr("action"); //get action url
+          var checkedMode = getCheckedMode();
+          var checkedStrength = getCheckedStrength();
+
+          var jsonFormInfo = JSON.stringify({
+            AirConditioner : 
+            {
+              CheckedAC: checkedAC,
+              Toggle: toggleOnOff,
+              TempVal: tempVal,
+              Mode: checkedMode,
+              Strength: checkedStrength
+            }
+          });
+
+          //printToConsole(toggleOnOff);
+
+          $.ajax(
+          {
+            type: "POST",
+            url: "/submit",
+            dataType: "json",
+            contentType: "application/json",
+            data: jsonFormInfo
+          });
         }
       });
 
-      $.ajax({
-        type: "POST",
-        url: post_url,
-        dataType: "json",
-        contentType: "application/json",
-        data: jsonFormInfo
-      });
+    </script>
 
-    });
+  </body>
 
-    $("#modeVentButton").click(function() {
-      var post_url = $(this).attr("action"); //get action url
-      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
-
-      var jsonFormInfo = JSON.stringify({
-        AirConditioner : {
-          ID: currentAC,
-          CMD: "Vent"
-        }
-      });
-
-      $.ajax({
-        type: "POST",
-        url: post_url,
-        dataType: "json",
-        contentType: "application/json",
-        data: jsonFormInfo
-      });
-    });
-
-    $("#modeHeatButton").click(function() {
-      var post_url = $(this).attr("action"); //get action url
-      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
-
-      var jsonFormInfo = JSON.stringify({
-        AirConditioner : {
-          ID: currentAC,
-          CMD: "Heat"
-        }
-      });
-
-      $.ajax({
-        type: "POST",
-        url: post_url,
-        dataType: "json",
-        contentType: "application/json",
-        data: jsonFormInfo
-      });
-    });
-
-    $("#modeChillButton").click(function() {
-      var post_url = $(this).attr("action"); //get action url
-      var currentAC = $('input[name=AirConditioners]:checked').val() // get selected Air conditioner
-
-      var jsonFormInfo = JSON.stringify({
-        AirConditioner : {
-          ID: currentAC,
-          CMD: "Chill"
-        }
-      });
-
-      $.ajax({
-        type: "POST",
-        url: post_url,
-        dataType: "json",
-        contentType: "application/json",
-        data: jsonFormInfo
-      });
-    });
-
-
-  </script>
-
-  <!--<script type="text/javascript" src="script.js"></script>-->
-
-</body>
 </html>
-

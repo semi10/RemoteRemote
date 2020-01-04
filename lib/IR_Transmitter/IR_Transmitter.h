@@ -6,7 +6,16 @@
 
 #define IR_TICK 2.5 //uSec
 
-enum IR_Cmd { IR_Cmd_TOGGLE, IR_Cmd_VENT, IR_Cmd_HEAT, IR_Cmd_CHILL, IR_Cmd_ChangeTemp };
+#define CHILL_MODE 0x10
+#define HOT_MODE  0x20
+#define VENT_MODE 0x50
+
+#define LOW_STRENGTH    0x00
+#define MEDIUM_STRENGTH 0x04
+#define HI_STRENGTH     0x08
+#define AUTO_STRENGTH   0x0C
+
+#define IR_CHANNELS_AVAILABLE   3
 
 struct s_irTimes
 {
@@ -20,13 +29,14 @@ class IR_Transmitter
 {
   public:
     IR_Transmitter();
-    void IR_Send(IR_Cmd cmd, uint8_t value = 0);
+    void IR_Send(const uint8_t checkedAC, const bool toggleOnOff, const char *checkedMode, const char *checkedStrength, const uint8_t tempVal);
     uint8_t formatTempVal(uint8_t tempVal);
   private:
     float realTick;
-    rmt_obj_t* rmt_send = NULL;
+    rmt_obj_t* rmt_send[3] = {NULL};
     rmt_data_t data[256];
     void createMsg(byte *cmd, rmt_data_t *data, byte size);
+    const uint8_t IR_Pin[IR_CHANNELS_AVAILABLE] = {18, 19, 23};
 };
 
 #endif

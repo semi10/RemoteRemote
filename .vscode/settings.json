@@ -43,6 +43,9 @@
         "streambuf": "cpp",
         "cinttypes": "cpp",
         "utility": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "rmt_struct.h": "c",
+        "esp32-hal-rmt.h": "c",
+        "periph_ctrl.h": "c"
     }
 }

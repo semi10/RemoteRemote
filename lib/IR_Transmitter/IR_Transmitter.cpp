@@ -5,54 +5,66 @@
 IR_Transmitter::IR_Transmitter()
 {
   // IR Setup
-  if ((rmt_send = rmtInit(18, true, RMT_MEM_64)) == NULL)
+  for (int IR_channel = 0; IR_channel < IR_CHANNELS_AVAILABLE; IR_channel++)
   {
-    Serial.println("init sender failed\n");
-  }
-  else
-  {
-    rmtSetCarrier(rmt_send, true, 1, 1050, 1050);
-    float realTick = rmtSetTick(rmt_send, IR_TICK * 1000);
-    printf("real tick set to: %fns\n", realTick);
+    if ((rmt_send[IR_channel] = rmtInit(IR_Pin[IR_channel], true, RMT_MEM_64)) == NULL)
+    {
+      Serial.println("init sender failed\n");
+    }
+    else
+    {
+      rmtSetCarrier(rmt_send[IR_channel], true, 1, 1050, 1050);
+      float realTick = rmtSetTick(rmt_send[IR_channel], IR_TICK * 1000);
+      printf("real tick set to: %fns\n", realTick);
+    }
   }
 }
 
-void IR_Transmitter::IR_Send(IR_Cmd cmd, uint8_t value)
+void IR_Transmitter::IR_Send(const uint8_t checkedAC, const bool toggleOnOff, const char *checkedMode, const char *checkedStrength, const uint8_t tempVal)
 {
   byte IR_Code[4] = {0};
-  uint8_t formatedTempVal;
+  uint8_t modeMask = 0;
+  uint8_t strengthMask = 0;
+  uint8_t formatedTempVal = 0;
   
-  switch (cmd)
-  {
-    case IR_Cmd_TOGGLE:
-      IR_Code[0] = 0x9C;
-      IR_Code[1] = 0x1C;
-      break;
-    case IR_Cmd_VENT:
-      IR_Code[0] = 0x58;
-      IR_Code[1] = 0x12;
-      break;
-    case IR_Cmd_HEAT:
-      IR_Code[0] = 0x20;
-      IR_Code[1] = 0x12;
-      break;
-    case IR_Cmd_CHILL:
-      IR_Code[0] = 0x18;
-      IR_Code[1] = 0x08;
-      break;
-    case IR_Cmd_ChangeTemp:
-      formatedTempVal = formatTempVal(value);
-      IR_Code[0] = 0x1C;
-      IR_Code[1] = formatedTempVal;
-      break;
-    default:
-      Serial.println("Wrong IR Cmd!");
-      return;
-      break;
-  }
+
+  IR_Code[0] = ~(uint8_t(0xFF >> toggleOnOff));
+
+  if      (!strcmp(checkedMode, "Vent"))  {modeMask = VENT_MODE;}
+  else if (!strcmp(checkedMode, "Heat"))  {modeMask = HOT_MODE;}
+  else if (!strcmp(checkedMode, "Chill")) {modeMask = CHILL_MODE;}
+  else {Serial.println("Wrong AC Mode!!!");}
+
+  IR_Code[0] |= modeMask;
+
+  if      (!strcmp(checkedStrength, "Low"))     {strengthMask = LOW_STRENGTH;}
+  else if (!strcmp(checkedStrength, "Medium"))  {strengthMask = MEDIUM_STRENGTH;}
+  else if (!strcmp(checkedStrength, "High"))    {strengthMask = HI_STRENGTH;}
+  else if (!strcmp(checkedStrength, "Auto"))    {strengthMask = AUTO_STRENGTH;}
+  else {Serial.println("Wrong AC Strength!!!");}
+
+  IR_Code[0] |= strengthMask;
+
+  formatedTempVal = (tempVal - 15) << 1;
+
+  IR_Code[1] |= formatedTempVal;
+
+  Serial.println(IR_Code[0], BIN);
+  Serial.println(IR_Code[1], BIN);
 
   createMsg(IR_Code, data, sizeof(IR_Code));
-  rmtWrite(rmt_send, data, 106);
+  
+  for (uint8_t IR_channel = 0;  IR_channel < 3;  IR_channel++)
+  {
+    if (checkedAC & (1 << IR_channel)) 
+    {
+      Serial.print("Toggle AC ");
+      Serial.println(IR_channel);
+      rmtWrite(rmt_send[IR_channel], data, 106);
+    }
+  }
+  
+
 }
 
 void IR_Transmitter::createMsg(byte *cmd, rmt_data_t *data, byte size) 

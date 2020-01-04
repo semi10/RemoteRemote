@@ -31,12 +31,15 @@ class CaptiveRequestHandler : public AsyncWebHandler {
     virtual ~CaptiveRequestHandler() {}
 
     bool canHandle(AsyncWebServerRequest *request){
-        Serial.println(request->url());
       if (request->url() == "/generate_204") return true;
-      if (request->url() == "/index.html" || request->url() == "/") return true;
-      if (request->url() == "/jquery.min.js")  return true;
-      if (request->url() == "/style.css")  return true;
-      //request->addInterestingHeader("ANY");
+      else if (request->url() == "/index.html" || request->url() == "/") return true;
+      else if (request->url() == "/jquery.js")  return true;
+      else if (request->url() == "/jqm-demos.css")  return true;
+      else if (request->url() == "/jquery.mobile.js")  return true;
+      else if (request->url() == "/jquery.mobile.css")  return true;
+      else if (request->url() == "/images/ajax-loader.gif")  return true;
+      else if (request->url() == "/style.css") return true;
+      else { Serial.println(request->url()); }
       return false;
     }
 
@@ -45,7 +48,10 @@ class CaptiveRequestHandler : public AsyncWebHandler {
       AsyncWebServerResponse *response;
 
       if (requestedURL == "/index.html") response = request->beginResponse(SPIFFS, "/index.html");
-      else if (requestedURL == "/jquery.min.js") response = request->beginResponse(SPIFFS, "/jquery.min.js");
+      else if (requestedURL == "/jquery.js") response = request->beginResponse(SPIFFS, "/jquery.js");
+      else if (requestedURL == "/jqm-demos.css") response = request->beginResponse(SPIFFS, "/jqm-demos.css");
+      else if (requestedURL == "/jquery.mobile.js") response = request->beginResponse(SPIFFS, "/jquery.mobile.js");
+      else if (requestedURL == "/jquery.mobile.css") response = request->beginResponse(SPIFFS, "/jquery.mobile.css");
       else if (requestedURL == "/style.css") response = request->beginResponse(SPIFFS, "/style.css");
       else response = request->beginResponse(SPIFFS, "/index.html");
       
@@ -68,7 +74,6 @@ void setup(){
   WiFi.softAP("IR3-captive");
   dnsServer.start(53, "*", WiFi.softAPIP());
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);//only when requested from AP
-
   
   AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/submit", [](AsyncWebServerRequest *request, JsonVariant &json) {
     JsonObject& jsonObj = json.as<JsonObject>();
@@ -88,50 +93,28 @@ void loop(){
 
 void handleJSON(JsonObject& jsonObj)
 {
-  const char * CMD = jsonObj["AirConditioner"]["CMD"];
-  const uint8_t ID = jsonObj["AirConditioner"]["ID"];
-  Serial.println(ID);
+  const uint8_t checkedAC =     jsonObj["AirConditioner"]["CheckedAC"];
+  const bool toggleOnOff =      jsonObj["AirConditioner"]["Toggle"];
+  const uint8_t tempVal =       jsonObj["AirConditioner"]["TempVal"];
+  const char *checkedMode =     jsonObj["AirConditioner"]["Mode"];
+  const char *checkedStrength = jsonObj["AirConditioner"]["Strength"];
 
-  //AirConditioner *currentAC;
-  switch (ID)
-  {
-    case 200: 
-      //currentAC = &AC200;
-      break;
-    case 201:
-      //currentAC = &AC201;
-      break;
-    case 202:
-      //currentAC = &AC202;
-      break;
-    default:
-      Serial.println("Unexpected AC ID");
-      return;
-  }
+  /*
+  Serial.println(checkedAC); 
+  Serial.println(toggleOnOff);
+  Serial.println(tempVal);
+  
+  if      (!strcmp(checkedMode, "Vent"))  {Serial.println("Vent");}
+  else if (!strcmp(checkedMode, "Heat"))  {Serial.println("Heat");}
+  else if (!strcmp(checkedMode, "Chill")) {Serial.println("Chill");}
+  else {Serial.println("Wrong AC Mode!!!");}
 
-  if (!strcmp(CMD, "Toggle"))
-  {
-    transmitter.IR_Send(IR_Cmd_TOGGLE);
-  } 
-  else if (!strcmp(CMD, "ChangeTemp"))
-  {
-    const uint8_t tempVal = jsonObj["AirConditioner"]["TempVal"];
-    transmitter.IR_Send(IR_Cmd_ChangeTemp, tempVal);
-  }
-  else if (!strcmp(CMD, "Vent"))
-  {
-    transmitter.IR_Send(IR_Cmd_VENT);
-  }
-  else if (!strcmp(CMD, "Heat"))
-  {
-    transmitter.IR_Send(IR_Cmd_HEAT);
-  }
-  else if (!strcmp(CMD, "Chill"))
-  {
-    transmitter.IR_Send(IR_Cmd_CHILL);
-  }
-  else
-  {
-    Serial.println("Wrong IR Cmd!");
-  }
+  if      (!strcmp(checkedStrength, "Low"))     {Serial.println("Low");}
+  else if (!strcmp(checkedStrength, "Medium"))  {Serial.println("Medium");}
+  else if (!strcmp(checkedStrength, "High"))    {Serial.println("High");}
+  else if (!strcmp(checkedStrength, "Auto"))    {Serial.println("Auto");}
+  else {Serial.println("Wrong AC Strength!!!");}
+  */
+
+  transmitter.IR_Send(checkedAC, toggleOnOff, checkedMode, checkedStrength, tempVal);
 }
