@@ -99,22 +99,5 @@ void handleJSON(JsonObject& jsonObj)
   const char *checkedMode =     jsonObj["AirConditioner"]["Mode"];
   const char *checkedStrength = jsonObj["AirConditioner"]["Strength"];
 
-  /*
-  Serial.println(checkedAC); 
-  Serial.println(toggleOnOff);
-  Serial.println(tempVal);
-  
-  if      (!strcmp(checkedMode, "Vent"))  {Serial.println("Vent");}
-  else if (!strcmp(checkedMode, "Heat"))  {Serial.println("Heat");}
-  else if (!strcmp(checkedMode, "Chill")) {Serial.println("Chill");}
-  else {Serial.println("Wrong AC Mode!!!");}
-
-  if      (!strcmp(checkedStrength, "Low"))     {Serial.println("Low");}
-  else if (!strcmp(checkedStrength, "Medium"))  {Serial.println("Medium");}
-  else if (!strcmp(checkedStrength, "High"))    {Serial.println("High");}
-  else if (!strcmp(checkedStrength, "Auto"))    {Serial.println("Auto");}
-  else {Serial.println("Wrong AC Strength!!!");}
-  */
-
   transmitter.IR_Send(checkedAC, toggleOnOff, checkedMode, checkedStrength, tempVal);
 }
